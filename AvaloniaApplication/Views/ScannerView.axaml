@@ -1,38 +1,48 @@
 <UserControl
 	xmlns="https://github.com/avaloniaui"
-    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-    x:Class="AvaloniaApplication.ScannerView"
-			 
+	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+	xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+	xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+	x:Class="AvaloniaApplication.ScannerView"
 	xmlns:vm="clr-namespace:AvaloniaApplication.ViewModels"
-    mc:Ignorable="d" d:DesignWidth="400" d:DesignHeight="800"
+	mc:Ignorable="d" d:DesignWidth="400" d:DesignHeight="800"
 	x:DataType="vm:ScannerViewModel"
-			 
 	xmlns:zxing="using:ZXing.Net.Maui.Controls"
 	xmlns:controls="using:Avalonia.Maui.Controls"
 	xmlns:mauiControls="using:Microsoft.Maui.Controls">
 
+	<!-- 设计时数据上下文：只在 XAML 设计器里生效，运行时由 ScannerView(ScannerViewModel) 设入 DataContext -->
 	<Design.DataContext>
 		<vm:ScannerViewModel />
 	</Design.DataContext>
 
-	<Grid 
-		ColumnDefinitions="* * *" 
-		RowDefinitions="* auto" 
+	<Grid
+		ColumnDefinitions="* * *"
+		RowDefinitions="* auto"
 		Background="White">
+		<!--
+			SPIKE：相机预览不再从这里挂载。
+			MauiControlHost.Content 改为在 ScannerView.axaml.cs 的 BuildSpikeContent 里用代码组装
+			"MAUI Grid(相机 index0 + 悬浮按钮 index1)"后再赋值。
+			原因：Avalonia 自己画的按钮永远盖不住这个原生视图；
+			悬浮在预览上的按钮必须和相机待在同一个 MAUI Grid 里（MAUI 按钮才能压住预览）。
+			背景与验证数据见 docs/maui-overlay-verification.md。
+		-->
 		<controls:MauiControlHost
 			Grid.Column="0"
 			Grid.ColumnSpan="3"
-			x:Name="cameraBarcodeReaderHost">
-			<zxing:CameraBarcodeReaderView
-				BarcodesDetected="BarcodesDetected"/>
-		</controls:MauiControlHost>
-		<Button 
+			x:Name="cameraBarcodeReaderHost"/>
+
+		<!--
+			底部工具条（三个 Avalonia 按钮）：当前保留，用于对照 / 兜底。
+			注意：它们画在 Avalonia 渲染层（位于相机原生视图下层），永远盖不住相机预览。
+			正式实现时这排按钮会移除，替换成 MAUI Grid 里的三个按钮（见 BuildSpikeContent）。
+		-->
+		<Button
 			Margin="20 20 0 20"
 			FontWeight="Bold"
-			Grid.Row="1" 
-			Grid.Column="0" 
+			Grid.Row="1"
+			Grid.Column="0"
 			Foreground="Yellow"
 			Background="Khaki"
 			BorderBrush="Yellow"
@@ -41,11 +51,11 @@
 			Width="100"
 			Command="{Binding ToggleTorch}"
 			Content="Torch"/>
-		<Button 
+		<Button
 			Margin="0 20 0 20"
 			FontWeight="Bold"
-			Grid.Row="1" 
-			Grid.Column="1" 
+			Grid.Row="1"
+			Grid.Column="1"
 			Foreground="Orange"
 			Background="Bisque"
 			BorderBrush="Orange"
@@ -54,11 +64,11 @@
 			Width="100"
 			Command="{Binding CancelCommand}"
 			Content="Cancel"/>
-		<Button 
+		<Button
 			Margin="0 20 20 20"
 			FontWeight="Bold"
-			Grid.Row="1" 
-			Grid.Column="2" 
+			Grid.Row="1"
+			Grid.Column="2"
 			Foreground="Blue"
 			Background="AliceBlue"
 			BorderBrush="Blue"

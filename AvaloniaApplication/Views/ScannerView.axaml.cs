@@ -7,26 +7,29 @@ using ZXing.Net.Maui;
 using ZXing.Net.Maui.Controls;
 
 // ========================================================
-// 类型别名（SPIKE 验证用）
+// 类型别名（MAUI 悬浮相机控件用）
 // --------------------------------------------------------
 // Microsoft.Maui.Controls 和 Avalonia.Controls 里都有 Button / Grid 这些同名类型，
 // 两个命名空间全量 using 会冲突，所以给 MAUI 侧的类型起别名。
 // 下面代码里 MauiButton / MauiGrid / MauiColor / MauiFontAttributes / MauiLayoutOptions
-// 都明确表示"这是 MAUI 控件"，避免和 Avalonia 的同名控件混淆。
+// / MauiHorizontalStackLayout / MauiThickness 都明确表示"这是 MAUI 控件"，
+// 避免和 Avalonia 的同名控件混淆。
 // ========================================================
 using MauiButton = Microsoft.Maui.Controls.Button;
 using MauiColor = Microsoft.Maui.Graphics.Color;
 using MauiFontAttributes = Microsoft.Maui.Controls.FontAttributes;
 using MauiGrid = Microsoft.Maui.Controls.Grid;
+using MauiHorizontalStackLayout = Microsoft.Maui.Controls.HorizontalStackLayout;
 using MauiLayoutOptions = Microsoft.Maui.Controls.LayoutOptions;
+using MauiThickness = Microsoft.Maui.Thickness;
 
 namespace AvaloniaApplication;
 
 /// <summary>
 /// 扫码页面视图。
 ///
-/// 当前处于"最小验证（SPIKE）"状态：相机预览和悬浮探针按钮由代码组装成一个
-/// MAUI Grid，作为 MauiControlHost.Content 交给原生层渲染。
+/// 相机预览与右上角悬浮按钮组由代码组装成一棵 MAUI 视图树，作为
+/// MauiControlHost.Content 交给原生层渲染。
 ///
 /// 背景知识（决定本文件机制的关键约束）：
 /// - Avalonia 自己画的任何内容（包括按钮）都画在同一个 SurfaceView 里，这个表面位于
@@ -34,22 +37,23 @@ namespace AvaloniaApplication;
 ///   盖不住相机预览。
 /// - 悬浮在预览上的控件必须和相机待在同一个 MAUI 视图树里：MAUI Grid 在 Android 上的
 ///   平台视图是 LayoutViewGroup，子控件按 Children 下标顺序绘制，下标大的在上层。
-/// 详细说明与验证数据见 docs/maui-overlay-verification.md。
+/// 详细说明与验证数据见 docs/maui-overlay-verification.md 与 docs/adr/0001-camera-overlay-must-be-maui.md。
 /// </summary>
 public partial class ScannerView : UserControl
 {
     /// <summary>
     /// 当前使用的 ZXing 相机条码识别视图（MAUI 控件）。
-    /// 在 OnLoaded 里由 BuildSpikeContent 构建；Torch / CameraLocation / StartDetecting / BarcodesDetected
+    /// 在 OnLoaded 里由 BuildCameraContent 构建；Torch / CameraLocation / StartDetecting / BarcodesDetected
     /// 都通过它操作相机。
     /// </summary>
     private CameraBarcodeReaderView? cameraBarcodeReaderView;
 
     /// <summary>
-    /// SPIKE：缓存 BuildSpikeContent 里创建好的相机实例。
-    /// OnLoaded 可能被多次调用（详见 OnLoaded），用它做幂等保护，避免重复构建视图和重复订阅事件。
+    /// 缓存 BuildCameraContent 里创建好的相机实例。
+    /// OnLoaded 可能被多次调用（详见 OnLoaded），用它做幂等保护，避免重复构建视图、
+    /// 重复订阅事件，也避免悬浮按钮被重复添加。
     /// </summary>
-    private CameraBarcodeReaderView? spikeCamera;
+    private CameraBarcodeReaderView? cameraContent;
 
     /// <summary>
     /// 无参构造：留给 XAML 设计器使用（设计时 DataContext 由 Design.DataContext 提供）。
@@ -73,7 +77,7 @@ public partial class ScannerView : UserControl
     /// <summary>
     /// 视图挂载到可视化树时触发（每次进入扫描页都会执行，注意可能被多次调用，本文档的实现是幂等的）。
     /// 职责：
-    /// 1) 构建"相机 + 悬浮按钮"的 MAUI Grid 并赋给 MauiControlHost.Content（SPIKE）；
+    /// 1) 构建"相机 + 右上角悬浮按钮组"的 MAUI 视图树并赋给 MauiControlHost.Content；
     /// 2) 设置条码识别参数（只识别一维条码、自动旋转、一次只出一个结果）；
     /// 3) 把 ViewModel 的事件桥接到本视图（MAUI 控件无法用 Avalonia 绑定，走事件机制）；
     /// 4) 启动识别。
@@ -82,8 +86,8 @@ public partial class ScannerView : UserControl
     {
         System.Diagnostics.Debug.WriteLine($"{nameof(ScannerView)}.{nameof(OnLoaded)}", "[TRACE]");
 
-        // SPIKE：相机不再从 XAML 挂载，改为在代码中构建整棵 MAUI 视图树并赋给 Content。
-        this.cameraBarcodeReaderView = BuildSpikeContent(this.Get<MauiControlHost>("cameraBarcodeReaderHost"));
+        // 相机与悬浮按钮在代码中组装成整棵 MAUI 视图树，赋给 MauiControlHost.Content。
+        this.cameraBarcodeReaderView = BuildCameraContent(this.Get<MauiControlHost>("cameraBarcodeReaderHost"));
 
         // ---------- 条码识别参数 ----------
         // Formats 仅保留一维条码（若需要可加回 QrCode）。
@@ -115,8 +119,8 @@ public partial class ScannerView : UserControl
     }
 
     /// <summary>
-    /// SPIKE（最小验证）：证明"MAUI 按钮可以显示在相机预览之上"。
-    /// 这是第一条路（把按钮下沉到 MAUI 层）的核心机制实现。
+    /// 构建"相机 + 右上角悬浮按钮组"的 MAUI 视图树并赋给 MauiControlHost.Content。
+    /// 这是悬浮按钮能显示在相机预览之上的核心机制。
     /// </summary>
     /// <remarks>
     /// 机制说明：
@@ -124,17 +128,17 @@ public partial class ScannerView : UserControl
     ///   所以 Content 可以是一棵包含相机和按钮的 MAUI 视图树，而不仅仅是一个叶子控件。
     /// - MAUI Grid 在 Android 上的平台视图是 LayoutViewGroup：子控件按 Children 下标顺序绘制，
     ///   下标小的在下层，下标大的在上层。
-    /// - 因此相机放 index 0、按钮放 index 1，按钮就会渲染在相机预览之上，且点击事件可以直接
-    ///   命中悬浮按钮。此能力是 Avalonia 自绘按钮不具备的。
+    /// - 因此相机放 index 0、按钮面板放 index 1，按钮就会渲染在相机预览之上，且点击事件可以直接
+    ///   命中悬浮按钮。此能力是 Avalonia 自绘按钮不具备的（背景见 docs/adr/0001-camera-overlay-must-be-maui.md）。
     /// </remarks>
-    private CameraBarcodeReaderView BuildSpikeContent(MauiControlHost host)
+    private CameraBarcodeReaderView BuildCameraContent(MauiControlHost host)
     {
         // ---------- 幂等保护 ----------
         // OnLoaded 会被多次调用（视图再次进入可视化树时），第一次构建后把相机实例缓存起来，
-        // 之后直接复用，避免重复创建视图、重复订阅 BarcodesDetected 导致识别流程错乱。
-        if (this.spikeCamera is not null)
+        // 之后直接复用：既避免重复创建视图、重复订阅 BarcodesDetected，也避免重复添加悬浮按钮组。
+        if (this.cameraContent is not null)
         {
-            return this.spikeCamera;
+            return this.cameraContent;
         }
 
         // ---------- 相机（下层，index 0） ----------
@@ -143,128 +147,67 @@ public partial class ScannerView : UserControl
         camera.BarcodesDetected += BarcodesDetected;
 
         // 组装 MAUI Grid：相机先放入 index 0 作为背景预览。
-        // 正式实现时，这里就是放相机 + Torch / Cancel / Camera 三个真实按钮的地方。
         var grid = new MauiGrid();
         grid.Children.Add(camera);
 
-        // ============ 探针按钮（SPIKE，上层，index 1） ============
-        // 目的：像素级验证"按钮确实画在相机预览之上"。
-        // - 选品红 #FF00FF：与相机画面（棕色调虚拟场景）反差最大，便于自动化截图分析。
-        // - 200x80 是设备无关单位（dpi），Android 端按屏幕密度放大为约 525x210 物理像素。
-        // - 居中放置，确保必然压在相机画面中央，让"谁盖住谁"一目了然。
-        bool probeHighlighted = true; // 探针当前颜色状态：true=品红，false=青色。
-        var probe = new MauiButton
+        // ---------- 右上角悬浮按钮组（上层，index 1） ----------
+        // 与相机同处一个 MAUI Grid 才能压住相机预览（见 docs/adr/0001-camera-overlay-must-be-maui.md）。
+        // 三个按钮是底部命令栏三个操作（开关闪光灯 / 关闭扫描页 / 切换前后摄像头）的第二组入口：
+        // 点击调用同一个 ViewModel 操作，效果与命令栏一致；配色沿用命令栏，方便两处一一对应。
+        var panel = new MauiHorizontalStackLayout
         {
-            Text = "SPIKE",
-            WidthRequest = 200,
-            HeightRequest = 80,
-            CornerRadius = 12,
-            FontSize = 24,
-            FontAttributes = MauiFontAttributes.Bold,
-            BackgroundColor = MauiColor.FromArgb("#FF00FF"),
-            TextColor = MauiColor.FromArgb("#000000"),
-            HorizontalOptions = MauiLayoutOptions.Center,
-            VerticalOptions = MauiLayoutOptions.Center,
+            // 深色半透明底板：相机画面是亮画面，垫高按钮文字与边界的对比度。
+            // 顶部留 28 dip 内边距，让按钮避开系统状态栏（模拟器实测按钮贴在 y=0 起会被压住）。
+            BackgroundColor = MauiColor.FromArgb("#80000000"),
+            Spacing = 8,
+            Padding = new MauiThickness(8, 28, 8, 8),
+            HorizontalOptions = MauiLayoutOptions.End,
+            VerticalOptions = MauiLayoutOptions.Start,
         };
 
-        // 探针的点击行为：特意做成"非破坏性"，只切换背景色（品红 ⇄ 青色），不碰相机。
-        // 它用来证明两件事：
-        //   ① 点击能命中悬浮在预览上方的 MAUI 按钮（事件穿透正常）；
-        //   ② 相机视图始终挂在 Grid 里、预览持续运行。
-        // 注意：千万不要把相机从 Grid 里摘下来再放回去——ZXing 的相机会话不会自动重建，
-        // 预览会永久空白（详见 docs/maui-overlay-verification.md 踩坑记录第 3 条）。
-        probe.Clicked += (_, _) =>
-        {
-            probeHighlighted = !probeHighlighted;
-            probe.BackgroundColor = MauiColor.FromArgb(probeHighlighted ? "#FF00FF" : "#00FFFF");
+        panel.Children.Add(MakeOverlayButton("灯控", "#F0E68C", "#FFFF00", vm => vm.ToggleTorch()));
+        panel.Children.Add(MakeOverlayButton("取消", "#FFE4C4", "#FFA500", vm => vm.CancelCommand()));
+        panel.Children.Add(MakeOverlayButton("切换摄像头", "#F0F8FF", "#0000FF", vm => vm.ToggleCameraLocation()));
 
-            SpikeLog($"probe tapped highlighted={probeHighlighted} children={grid.Children.Count}");
-            DumpSpikeTree(grid, probe, camera);
-            Services.ToastService.ShowToastShort(probeHighlighted ? "probe magenta" : "probe cyan");
-        };
-
-        // 按钮后加入，落在 index 1 → 绘制在相机（index 0）之上。
-        grid.Children.Add(probe);
+        // 面板后加入，落在 index 1 → 绘制在相机（index 0）之上、贴在预览右上角。
+        grid.Children.Add(panel);
 
         // ---------- 交给宿主 ----------
         // 把整棵 MAUI 视图树赋给 MauiControlHost.Content：宿主经 MAUI handler 管线
         //（IViewHandler.CreatePlatformView）生成平台视图，再由 NativeControlHost
         // 挂进 Avalonia 视图层（该原生视图位于 Avalonia 渲染表面之上）。
         host.Content = grid;
-        this.spikeCamera = camera;
+        this.cameraContent = camera;
 
-        SpikeLog($"built children={grid.Children.Count} (tap the probe to repaint it)");
-        DumpSpikeTree(grid, probe, camera);
         return camera;
     }
 
     /// <summary>
-    /// SPIKE：诊断日志出口，统一打 [SPIKE] 前缀便于过滤。
-    /// Android 上 System.Diagnostics.Debug.WriteLine 会以 [类别] 格式出现在
-    /// logcat 的 app_process64 标签下，可在 adb logcat -s 时直接 grep。
+    /// 构造右上角悬浮按钮：紧凑尺寸、粗体，文案与配色按调用方给定。
+    /// MAUI 按钮用不上 Avalonia 命令绑定，点击直接调用 ScannerViewModel 的操作；
+    /// Torch / Camera 的相机动作仍由现有事件桥接（TorchToggled / CameraLocationToggled）落到底层控件。
     /// </summary>
-    private static void SpikeLog(string message)
+    private MauiButton MakeOverlayButton(string text, string backgroundHex, string foregroundHex, System.Action<ScannerViewModel> action)
     {
-        System.Diagnostics.Debug.WriteLine(message, "[SPIKE]");
-    }
-
-    /// <summary>
-    /// SPIKE 诊断：延迟 3 秒（等待 MAUI handler 完成连接、平台视图就绪）后，把
-    /// MAUI 视图树 / handler / 平台视图的现状打到日志，用于确认：
-    /// - Grid 的平台视图（期望 LayoutViewGroup）是否挂进了宿主；
-    /// - 探针按钮（期望 MauiMaterialButton）和相机（期望 CameraX PreviewView）
-    ///   是否同属一个 ViewGroup —— 这是它们能互相层叠的前提。
-    /// </summary>
-    private static async void DumpSpikeTree(MauiGrid grid, MauiButton probe, CameraBarcodeReaderView camera)
-    {
-        try
+        var button = new MauiButton
         {
-            await System.Threading.Tasks.Task.Delay(3000);
-
-            var gridPv = grid.Handler?.PlatformView;   // Grid 的原生平台视图
-            var probePv = probe.Handler?.PlatformView; // 按钮的原生平台视图
-            var camPv = camera.Handler?.PlatformView;  // 相机的原生平台视图
-
-            var sb = new System.Text.StringBuilder();
-            sb.Append($"children={grid.Children.Count}");
-            sb.Append($" gridPv={Describe(gridPv)}");
-            sb.Append($" probeFrame={probe.Frame} probeW={probe.Width} probeH={probe.Height} probeVisible={probe.IsVisible}");
-            sb.Append($" probePv={Describe(probePv)}");
-            sb.Append($" probePvParentIsGridPv={ReferenceEquals(GetProp(probePv, "Parent"), gridPv)}");
-            sb.Append($" camPv={Describe(camPv)}");
-            sb.Append($" camPvParentIsGridPv={ReferenceEquals(GetProp(camPv, "Parent"), gridPv)}");
-
-            SpikeLog(sb.ToString());
-        }
-        catch (System.Exception ex)
+            Text = text,
+            WidthRequest = 78,
+            HeightRequest = 42,
+            CornerRadius = 8,
+            FontSize = 14,
+            FontAttributes = MauiFontAttributes.Bold,
+            BackgroundColor = MauiColor.FromArgb(backgroundHex),
+            TextColor = MauiColor.FromArgb(foregroundHex),
+        };
+        button.Clicked += (_, _) =>
         {
-            // 诊断代码不应影响主流程：任何异常只记录，不上抛。
-            SpikeLog($"ERROR {ex}");
-        }
-    }
-
-    /// <summary>
-    /// SPIKE：用反射读取对象属性。
-    /// 共享工程目标是 net9.0（非 -android），引用不了 Android 类型，反射是最省事的兼容写法。
-    /// </summary>
-    private static object? GetProp(object? o, string name) =>
-        o is null ? null : o.GetType().GetProperty(name)?.GetValue(o);
-
-    /// <summary>
-    /// SPIKE：把平台视图描述成字符串（类型名 + 父类型 + 子视图数量），
-    /// 比直接打印对象更直观，且不需要引用平台特定 API。
-    /// </summary>
-    private static string Describe(object? view)
-    {
-        if (view is null)
-        {
-            return "null";
-        }
-
-        var t = view.GetType();
-        var parent = GetProp(view, "Parent");
-        var childCount = GetProp(view, "ChildCount");
-        return $"{t.Name}(parent={parent?.GetType().Name ?? "null"},children={childCount ?? "-"})";
+            if (DataContext is ScannerViewModel vm)
+            {
+                action(vm);
+            }
+        };
+        return button;
     }
 
     /// <summary>手电筒当前开关状态：避免每次切换都去查询相机状态。</summary>

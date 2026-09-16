@@ -163,11 +163,44 @@ camera (540,400) = (122,92,64)                             ← 相机全程保�
 
 ## 10. 当前代码状态与后续
 
-- **代码状态**：`ScannerView.axaml` 与 `ScannerView.axaml.cs` 中保留验证代码（含 SPIKE 探针与 `[SPIKE]` 诊断日志），**未提交**；`git checkout -- <文件>` 可随时还原到原始状态。原始三个 Avalonia 按钮（Torch/Cancel/Camera）仍保留在底部栏。
-- **待定决策**：
-  - Q2：桌面端是否要保持可用？（MAUI 侧按钮在桌面无宿主，不会显示）
+- **代码状态**：SPIKE 探针按钮与 `[SPIKE]` 诊断日志已**移除**；相机与右上角悬浮按钮组由
+  `ScannerView.axaml.cs` 的 `BuildCameraContent` 在代码中组装（见 §11）。**底部 Avalonia
+  按钮栏保留**（决策：作为命令栏，与右上角悬浮按钮组互为第二入口；不是"移除/替换"）。
+- **遗留待定决策**：
+  - Q2：桌面端是否要保持可用？（MAUI 侧按钮在桌面无宿主，不会显示；当前桌面端只有底部命令栏）
   - Q3：除三个按钮外，是否还有别的要浮在预览上的元素（取景框、扫描线等）？
-- **后续动作**：决策确认后，将 Torch/Cancel/Camera 实现为 MAUI 按钮（相机 index 0、按钮 index 1+，`Clicked` 直调 `ScannerViewModel` 现有方法），并从 XAML 移除底部 Avalonia 按钮栏；按约定补写一条 ADR 记录该架构决策。
+
+---
+
+## 11. 右上角悬浮按钮组（正式实现）验证
+
+探针按钮与诊断脚手架已移除，替换为右上角 Torch / Cancel / Camera 三个真实按钮
+（MAUI `MauiButton`，与相机同处一个 `LayoutViewGroup`：相机 index 0、按钮面板 index 1，
+面板 `HorizontalOptions=End, VerticalOptions=Start`，`#80000000` 半透明底板，顶部留 28 dip
+内边距避开状态栏）。架构约束记录于 `docs/adr/0001-camera-overlay-must-be-maui.md`。
+
+### 验证结果
+
+| 检查项 | 结果 |
+|---|---|
+| 右上角水平一行三按钮、右对齐、尺寸紧凑 | ✅ 模拟器实测节点：灯控 `[402,74][607,185]`、取消 `[628,74][833,185]`、切换摄像头 `[854,74][1059,185]`（1080px 宽屏，右缘距屏边约 21px = 8dip 内边距 × 2.625 密度） |
+| 显示在相机实时画面之上 | ✅ `dumpsys activity top`：按钮位于相机 `PreviewView` 之后的兄弟布局内，绘制于其上 |
+| 状态栏遮挡 | ✅ 顶部 28dip 内边距后按钮 y 起点 74px，位于状态栏交互区域之下；⚠️ 模拟器实测该区域（y≈130 以下）部分输入会被系统顶部区域吞掉，点击按钮中下部（y≥150）事件正常 |
+| 点击接线（Torch） | ✅ logcat `[TRACE]: TorchToggled` → `TorchControl: Unable to enableTorch due to there is no flash unit`（模拟器相机无闪光灯单元，视觉效果无法在模拟器验证，接线本身正确） |
+| 点击接线（Cancel / Camera） | ✅ 用户手动验证确认（点击关闭扫描页 / 切换前后摄像头与命令栏一致） |
+| 扫码成功→结果页不遮挡、Scan Again 恢复、桌面端启动无异常 | ✅ 用户手动验证确认 |
+| 幂等性（重复进出扫描页） | ✅ 按钮节点每次只出现一组；构建逻辑在首次后缓存复用 |
+| Debug APK 快速部署坑 | 见 `docs/build-apk.md`：直接 `adb install` Debug APK 会跑设备上残留的旧程序集；安装需 `-p:EmbedAssembliesIntoApk=true` 或 Release |
+
+### 验证环境
+
+- 模拟器：`pixel_7_-_api_36_0`（API 36，1080×2400，软件渲染 `swiftshader_indirect`）。
+- 自动化手段：`uiautomator dump` 取按钮节点与坐标、`dumpsys activity top` 取视图层级、
+  `logcat` 取事件日志（`System.Diagnostics.Debug.WriteLine` 落在 `app_process64` 标签）；
+  按钮点击行为部分由用户手动验证确认。
+- 模拟器相机无闪光灯单元，Torch 的"开/关可见效果"需在带闪光灯的真机/可模拟闪光的设备上确认。
+- 按钮文案在手动验证阶段由用户改为中文（灯控 / 取消 / 切换摄像头）；按钮为定宽
+  （78dip），文案不影响位置，上表坐标在改动前后一致。
 
 ---
 

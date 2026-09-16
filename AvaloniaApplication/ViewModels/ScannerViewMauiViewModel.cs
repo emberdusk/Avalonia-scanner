@@ -38,6 +38,7 @@ public class ScannerViewMauiViewModel : ViewModelBase
 
     public void ReceiveScanResult(string scanResult)
     {
+        ShowButtons = false;
         this.mainViewModel.ScanResult = scanResult;
     }
 }

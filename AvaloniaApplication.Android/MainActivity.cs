@@ -21,6 +21,7 @@ public class MainActivity : AvaloniaMainActivity<App>
     {
         Services.PermissionService = new AndroidPermissionService();
         Services.ToastService = new ToastService(ApplicationContext!);
+        Services.NativeScannerHost = new NativeScannerHost();
 
         return base.CustomizeAppBuilder(builder)
             .WithInterFont()

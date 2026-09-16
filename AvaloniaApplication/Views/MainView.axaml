@@ -15,23 +15,85 @@
 		RowDefinitions="* auto *"
 		ColumnDefinitions="* auto *">
 
-		<Button
+		<!-- 2x2 Grid of entry buttons -->
+		<Grid
 			Grid.Column="1"
 			Grid.Row="1"
 			HorizontalAlignment="Center"
 			VerticalAlignment="Center"
-			Padding="20"
-			Command="{Binding ScanCommand}"
-			Content="Scan"/>
+			RowDefinitions="Auto Auto"
+			ColumnDefinitions="Auto Auto">
 
+			<Button
+				Grid.Row="0" Grid.Column="0"
+				Padding="20"
+				MinWidth="120"
+				Margin="0,0,7,7"
+				Command="{Binding OriginalScanCommand}"
+				Content="Original"/>
+
+			<Button
+				Grid.Row="0" Grid.Column="1"
+				Padding="20"
+				MinWidth="120"
+				Margin="7,0,0,7"
+				Command="{Binding AvaloniaScanCommand}"
+				Content="Avalonia"/>
+
+			<Button
+				Grid.Row="1" Grid.Column="0"
+				Padding="20"
+				MinWidth="120"
+				Margin="0,7,7,0"
+				Command="{Binding MauiScanCommand}"
+				Content="MAUI"/>
+
+			<Button
+				Grid.Row="1" Grid.Column="1"
+				Padding="20"
+				MinWidth="120"
+				Margin="7,7,0,0"
+				Command="{Binding NativeScanCommand}"
+				Content="Native"/>
+		</Grid>
+
+		<!-- Original Scanner Overlay -->
 		<ContentControl
 			Grid.Column="0"
 			Grid.Row="0"
 			Grid.ColumnSpan="3"
 			Grid.RowSpan="3"
-			IsVisible="{Binding ShowScanner}"
-			Content="{Binding Scanner}"/>
+			IsVisible="{Binding ShowOriginalScanner}"
+			Content="{Binding OriginalScanner}"/>
 
+		<!-- Avalonia Scanner Overlay -->
+		<ContentControl
+			Grid.Column="0"
+			Grid.Row="0"
+			Grid.ColumnSpan="3"
+			Grid.RowSpan="3"
+			IsVisible="{Binding ShowAvaloniaScanner}"
+			Content="{Binding AvaloniaScanner}"/>
+
+		<!-- MAUI Scanner Overlay -->
+		<ContentControl
+			Grid.Column="0"
+			Grid.Row="0"
+			Grid.ColumnSpan="3"
+			Grid.RowSpan="3"
+			IsVisible="{Binding ShowMauiScanner}"
+			Content="{Binding MauiScanner}"/>
+
+		<!-- Native Scanner Overlay -->
+		<ContentControl
+			Grid.Column="0"
+			Grid.Row="0"
+			Grid.ColumnSpan="3"
+			Grid.RowSpan="3"
+			IsVisible="{Binding ShowNativeScanner}"
+			Content="{Binding NativeScanner}"/>
+
+		<!-- Result Overlay Background -->
 		<Panel
 			IsVisible="{Binding ShowResult}"
 			Grid.Column="0"
@@ -40,6 +102,8 @@
 			Grid.RowSpan="3"
 			Background="Black"
 			Opacity="90"/>
+
+		<!-- Result Card -->
 		<Panel
 			IsVisible="{Binding ShowResult}"
 			Background="White"
@@ -68,7 +132,7 @@
 						Background="LightGreen"
 						BorderBrush="DarkGreen"
 						HorizontalAlignment="Center"
-						Command="{Binding ScanCommand}"
+						Command="{Binding OriginalScanCommand}"
 						Content="Scan Again"/>
 				</Grid>
 			</Border>

@@ -38,7 +38,7 @@ namespace AvaloniaApplication.ViewModels
 
         public void CancelCommand()
         {
-            this.mainViewModel.ShowScanner = false;
+            this.mainViewModel.ShowOriginalScanner = false;
         }
 
         public void ReceiveScanResult(string scanResult)

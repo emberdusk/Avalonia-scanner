@@ -17,20 +17,95 @@ public class MainViewModel : ViewModelBase
 
     }
 
-    private ScannerView? scanner;
-    public ScannerView? Scanner
+    // --- Original Scanner ---
+    private ScannerView? originalScanner;
+    public ScannerView? OriginalScanner
     {
-        get => scanner;
-        set => scanner = this.RaiseAndSetIfChanged(ref scanner, value);
+        get => originalScanner;
+        set => originalScanner = this.RaiseAndSetIfChanged(ref originalScanner, value);
     }
 
-    private bool showScanner;
-    public bool ShowScanner
+    private bool showOriginalScanner;
+    public bool ShowOriginalScanner
     {
-        get => showScanner;
-        set => showScanner = this.RaiseAndSetIfChanged(ref showScanner, value);
+        get => showOriginalScanner;
+        set
+        {
+            if (value)
+            {
+                HideAllScanners();
+            }
+            showOriginalScanner = this.RaiseAndSetIfChanged(ref showOriginalScanner, value);
+        }
     }
 
+    // --- Avalonia Scanner ---
+    private Views.ScannerView.AvaloniaScannerView? avaloniaScanner;
+    public Views.ScannerView.AvaloniaScannerView? AvaloniaScanner
+    {
+        get => avaloniaScanner;
+        set => avaloniaScanner = this.RaiseAndSetIfChanged(ref avaloniaScanner, value);
+    }
+
+    private bool showAvaloniaScanner;
+    public bool ShowAvaloniaScanner
+    {
+        get => showAvaloniaScanner;
+        set
+        {
+            if (value)
+            {
+                HideAllScanners();
+            }
+            showAvaloniaScanner = this.RaiseAndSetIfChanged(ref showAvaloniaScanner, value);
+        }
+    }
+
+    // --- MAUI Scanner ---
+    private Views.ScannerView.MauiScannerView? mauiScanner;
+    public Views.ScannerView.MauiScannerView? MauiScanner
+    {
+        get => mauiScanner;
+        set => mauiScanner = this.RaiseAndSetIfChanged(ref mauiScanner, value);
+    }
+
+    private bool showMauiScanner;
+    public bool ShowMauiScanner
+    {
+        get => showMauiScanner;
+        set
+        {
+            if (value)
+            {
+                HideAllScanners();
+            }
+            showMauiScanner = this.RaiseAndSetIfChanged(ref showMauiScanner, value);
+        }
+    }
+
+    // --- Native Scanner ---
+    private Views.ScannerView.NativeScannerView? nativeScanner;
+    public Views.ScannerView.NativeScannerView? NativeScanner
+    {
+        get => nativeScanner;
+        set => nativeScanner = this.RaiseAndSetIfChanged(ref nativeScanner, value);
+    }
+
+    private bool showNativeScanner;
+    public bool ShowNativeScanner
+    {
+        get => showNativeScanner;
+        set
+        {
+            if (value)
+            {
+                HideAllScanners();
+            }
+            showNativeScanner = this.RaiseAndSetIfChanged(ref showNativeScanner, value);
+        }
+    }
+
+    // --- Shared Result State ---
     private string scanResult = "";
     public string ScanResult
     {
@@ -39,7 +114,7 @@ public class MainViewModel : ViewModelBase
         {
             if (value != "")
             {
-                ShowScanner = false;
+                HideAllScanners();
                 ShowResult = true;
             }
             else
@@ -58,24 +133,25 @@ public class MainViewModel : ViewModelBase
         set => showResult = this.RaiseAndSetIfChanged(ref showResult, value);
     }
 
-    public async Task ScanCommand()
+    // --- Any Scanner Active (for overlay visibility) ---
+    public bool ShowAnyScanner => ShowOriginalScanner || ShowAvaloniaScanner || ShowMauiScanner || ShowNativeScanner;
+
+    private void HideAllScanners()
     {
-        System.Diagnostics.Debug.WriteLine(nameof(ScanCommand), "[TRACE]");
+        ShowOriginalScanner = false;
+        ShowAvaloniaScanner = false;
+        ShowMauiScanner = false;
+        ShowNativeScanner = false;
+        this.RaisePropertyChanged(nameof(ShowAnyScanner));
+    }
 
-        ScanResult = "";
-        ShowResult = false;
-
+    // --- Permission Check (shared) ---
+    private async Task<bool> EnsureCameraPermission()
+    {
         bool hasPermission = await Services.PermissionService.CheckPermission<Permissions.Camera>();
 
         if (!hasPermission)
         {
-            //bool gotPermission = await Services.PermissionService.RequestPermission<Permissions.Camera>();
-
-            //if (gotPermission)
-            //{
-            //    hasPermission = true;
-            //}
-
             try
             {
                 using var ctsRequest = new CancellationTokenSource(TimeSpan.FromSeconds(1));
@@ -93,7 +169,6 @@ public class MainViewModel : ViewModelBase
             catch (OperationCanceledException oce)
             {
                 System.Diagnostics.Debug.WriteLine(oce, "[ERROR]");
-                // Request is shown to user but never returns a result, move on and poll with CheckPermission.
             }
             catch (Exception ex)
             {
@@ -103,7 +178,6 @@ public class MainViewModel : ViewModelBase
 
             using var ctsPollTimeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
 
-            // HACK: If permission has been given start scanning, otherwise wait a bit, after 5 seconds assume it was denied.
             while (!ctsPollTimeout.IsCancellationRequested)
             {
                 bool result = await Services.PermissionService.CheckPermission<Permissions.Camera>();
@@ -116,11 +190,89 @@ public class MainViewModel : ViewModelBase
             }
         }
 
-        if (hasPermission)
+        return hasPermission;
+    }
+
+    // --- Original Scan Command ---
+    public async Task OriginalScanCommand()
+    {
+        System.Diagnostics.Debug.WriteLine(nameof(OriginalScanCommand), "[TRACE]");
+
+        ScanResult = "";
+        ShowResult = false;
+
+        if (await EnsureCameraPermission())
         {
-            Scanner ??= new ScannerView(new ScannerViewModel(this));
-            ShowScanner = true;
-            Scanner.StartDetecting();
+            OriginalScanner ??= new ScannerView(new ScannerViewModel(this));
+            ShowOriginalScanner = true;
+            this.RaisePropertyChanged(nameof(ShowAnyScanner));
+            OriginalScanner.StartDetecting();
+        }
+        else
+        {
+            Services.ToastService.ShowToastLong("ERROR: Camera permission not granted");
+        }
+    }
+
+    // --- Avalonia Scan Command ---
+    public async Task AvaloniaScanCommand()
+    {
+        System.Diagnostics.Debug.WriteLine(nameof(AvaloniaScanCommand), "[TRACE]");
+
+        ScanResult = "";
+        ShowResult = false;
+
+        if (await EnsureCameraPermission())
+        {
+            var vm = new ScannerViewAvaloniaViewModel(this);
+            AvaloniaScanner ??= new Views.ScannerView.AvaloniaScannerView(vm);
+            ShowAvaloniaScanner = true;
+            this.RaisePropertyChanged(nameof(ShowAnyScanner));
+            AvaloniaScanner.StartDetecting();
+        }
+        else
+        {
+            Services.ToastService.ShowToastLong("ERROR: Camera permission not granted");
+        }
+    }
+
+    // --- MAUI Scan Command ---
+    public async Task MauiScanCommand()
+    {
+        System.Diagnostics.Debug.WriteLine(nameof(MauiScanCommand), "[TRACE]");
+
+        ScanResult = "";
+        ShowResult = false;
+
+        if (await EnsureCameraPermission())
+        {
+            var vm = new ScannerViewMauiViewModel(this);
+            MauiScanner ??= new Views.ScannerView.MauiScannerView(vm);
+            ShowMauiScanner = true;
+            this.RaisePropertyChanged(nameof(ShowAnyScanner));
+            MauiScanner.StartDetecting();
+        }
+        else
+        {
+            Services.ToastService.ShowToastLong("ERROR: Camera permission not granted");
+        }
+    }
+
+    // --- Native Scan Command ---
+    public async Task NativeScanCommand()
+    {
+        System.Diagnostics.Debug.WriteLine(nameof(NativeScanCommand), "[TRACE]");
+
+        ScanResult = "";
+        ShowResult = false;
+
+        if (await EnsureCameraPermission())
+        {
+            var vm = new ScannerViewNativeViewModel(this);
+            NativeScanner ??= new Views.ScannerView.NativeScannerView(vm);
+            ShowNativeScanner = true;
+            this.RaisePropertyChanged(nameof(ShowAnyScanner));
+            NativeScanner.StartDetecting();
         }
         else
         {

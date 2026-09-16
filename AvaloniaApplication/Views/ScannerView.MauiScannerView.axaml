@@ -1,0 +1,56 @@
+<UserControl
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    x:Class="AvaloniaApplication.Views.ScannerView.MauiScannerView"
+    xmlns:vm="clr-namespace:AvaloniaApplication.ViewModels"
+    mc:Ignorable="d" d:DesignWidth="400" d:DesignHeight="800"
+    x:DataType="vm:ScannerViewMauiViewModel"
+    xmlns:zxing="using:ZXing.Net.Maui.Controls"
+    xmlns:controls="using:Avalonia.Maui.Controls">
+
+    <Grid ColumnDefinitions="*" RowDefinitions="* Auto">
+        <controls:MauiControlHost
+            Grid.Column="0" Grid.Row="0"
+            x:Name="cameraBarcodeReaderHost">
+            <zxing:CameraBarcodeReaderView
+                BarcodesDetected="BarcodesDetected"/>
+        </controls:MauiControlHost>
+
+        <Panel
+            Grid.Column="0" Grid.Row="0"
+            IsVisible="{Binding ShowButtons}"
+            VerticalAlignment="Bottom"
+            Margin="0,0,0,20">
+            <Border Background="#80000000" CornerRadius="10" Margin="20,0">
+                <StackPanel Orientation="Horizontal" Spacing="10" Margin="10">
+                    <Button
+                        FontWeight="Bold"
+                        Foreground="Yellow"
+                        Background="Khaki"
+                        BorderBrush="Yellow"
+                        Padding="15,8"
+                        Command="{Binding ToggleTorch}"
+                        Content="Torch"/>
+                    <Button
+                        FontWeight="Bold"
+                        Foreground="Orange"
+                        Background="Bisque"
+                        BorderBrush="Orange"
+                        Padding="15,8"
+                        Command="{Binding CancelCommand}"
+                        Content="Cancel"/>
+                    <Button
+                        FontWeight="Bold"
+                        Foreground="Blue"
+                        Background="AliceBlue"
+                        BorderBrush="Blue"
+                        Padding="15,8"
+                        Command="{Binding ToggleCameraLocation}"
+                        Content="Camera"/>
+                </StackPanel>
+            </Border>
+        </Panel>
+    </Grid>
+</UserControl>

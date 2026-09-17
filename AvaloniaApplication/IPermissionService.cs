@@ -19,7 +19,6 @@ namespace AvaloniaApplication
     {
         public static IPermissionService PermissionService { get; set; } = new DefaultPermissionService();
         public static IToastService ToastService { get; set; } = new DefaultToastService();
-        public static INativeScannerHost? NativeScannerHost { get; set; }
     }
 
     public class DefaultToastService : IToastService

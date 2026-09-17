@@ -103,6 +103,24 @@ public class MauiScannerPage : ContentPage
         buttonPanel.IsVisible = visible;
     }
 
+    private bool torchState;
+    public void ToggleTorch()
+    {
+        torchState = !torchState;
+        cameraBarcodeReaderView.IsTorchOn = torchState;
+    }
+
+    private ZXing.Net.Maui.CameraLocation cameraLocation = ZXing.Net.Maui.CameraLocation.Rear;
+    public void ToggleCameraLocation()
+    {
+        cameraLocation = cameraLocation switch
+        {
+            ZXing.Net.Maui.CameraLocation.Rear => ZXing.Net.Maui.CameraLocation.Front,
+            _ => ZXing.Net.Maui.CameraLocation.Rear,
+        };
+        cameraBarcodeReaderView.CameraLocation = cameraLocation;
+    }
+
     private void OnBarcodesDetected(object? sender, ZXing.Net.Maui.BarcodeDetectionEventArgs e)
     {
         if (cameraBarcodeReaderView.IsDetecting)

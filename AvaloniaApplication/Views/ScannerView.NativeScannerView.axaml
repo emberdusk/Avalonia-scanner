@@ -8,9 +8,10 @@
     mc:Ignorable="d" d:DesignWidth="400" d:DesignHeight="800"
     x:DataType="vm:ScannerViewNativeViewModel"
     xmlns:zxing="using:ZXing.Net.Maui.Controls"
-    xmlns:controls="using:Avalonia.Maui.Controls">
+    xmlns:controls="using:Avalonia.Maui.Controls"
+    xmlns:local="clr-namespace:AvaloniaApplication">
 
-    <Grid ColumnDefinitions="*" RowDefinitions="* Auto">
+    <Grid ColumnDefinitions="*" RowDefinitions="*">
         <controls:MauiControlHost
             Grid.Column="0" Grid.Row="0"
             x:Name="cameraBarcodeReaderHost">
@@ -18,8 +19,11 @@
                 BarcodesDetected="BarcodesDetected"/>
         </controls:MauiControlHost>
 
-        <Panel
-            Grid.Column="0" Grid.Row="1"
-            x:Name="nativeButtonPanel"/>
+        <local:NativeScannerButtonHost
+            Grid.Column="0" Grid.Row="0"
+            IsVisible="{Binding ShowButtons}"
+            VerticalAlignment="Bottom"
+            Margin="0,0,0,20"
+            x:Name="nativeButtonHost"/>
     </Grid>
 </UserControl>

@@ -7,7 +7,6 @@ namespace AvaloniaApplication.Views.ScannerView;
 public partial class NativeScannerView : UserControl
 {
     private ZXing.Net.Maui.Controls.CameraBarcodeReaderView? cameraBarcodeReaderView;
-    private INativeButtonHost? nativeButtonHost;
 
     public NativeScannerView()
     {
@@ -38,23 +37,10 @@ public partial class NativeScannerView : UserControl
             vm.TorchToggled += TorchToggled;
             vm.CameraLocationToggled += CameraLocationToggled;
 
-            // Wire up native buttons if the platform host is available
-            if (Services.NativeScannerHost is INativeScannerHost host)
-            {
-                nativeButtonHost = host.CreateButtonHost();
-                if (nativeButtonHost is not null)
-                {
-                    nativeButtonHost.TorchClicked += () => vm.ToggleTorch();
-                    nativeButtonHost.CancelClicked += () => vm.CancelCommand();
-                    nativeButtonHost.CameraClicked += () => vm.ToggleCameraLocation();
-
-                    var panel = this.Get<Panel>("nativeButtonPanel");
-                    if (panel is not null)
-                    {
-                        panel.Children.Add(nativeButtonHost.Host);
-                    }
-                }
-            }
+            var host = this.Get<NativeScannerButtonHost>("nativeButtonHost");
+            host.TorchClicked += () => vm.ToggleTorch();
+            host.CancelClicked += () => vm.CancelCommand();
+            host.CameraClicked += () => vm.ToggleCameraLocation();
         }
 
         this.cameraBarcodeReaderView.IsDetecting = true;
@@ -100,11 +86,5 @@ public partial class NativeScannerView : UserControl
             if (e.Results.Length == 1 && DataContext is ScannerViewNativeViewModel vm)
                 vm.ReceiveScanResult(e.Results[0].Value);
         });
-    }
-
-    protected override void OnUnloaded(Avalonia.Interactivity.RoutedEventArgs e)
-    {
-        nativeButtonHost?.Dispose();
-        base.OnUnloaded(e);
     }
 }

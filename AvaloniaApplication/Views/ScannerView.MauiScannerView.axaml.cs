@@ -30,6 +30,9 @@ public partial class MauiScannerView : UserControl
             mauiPage.CancelRequested += () => vm.CancelCommand();
             mauiPage.BarcodeDetected += value => vm.ReceiveScanResult(value);
 
+            vm.TorchToggled += () => mauiPage.ToggleTorch();
+            vm.CameraLocationToggled += () => mauiPage.ToggleCameraLocation();
+
             var host = this.Get<MauiControlHost>("mauiHost");
             host.Content = mauiPage.Content;
         }

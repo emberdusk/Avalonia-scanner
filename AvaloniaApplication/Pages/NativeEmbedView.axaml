@@ -33,7 +33,7 @@
         整体布局：垂直排列的 StackPanel
         顶部是说明文字，中间是两个嵌入的原生控件，底部是返回按钮
     -->
-    <StackPanel Spacing="10" Margin="20">
+    <StackPanel Spacing="10" Margin="20" Background="White">
 
         <!-- 标题 -->
         <TextBlock Text="标题Native Android View Embedding"

@@ -21,7 +21,7 @@
 			Grid.Row="1"
 			HorizontalAlignment="Center"
 			VerticalAlignment="Center"
-			RowDefinitions="Auto Auto"
+			RowDefinitions="Auto Auto Auto"
 			ColumnDefinitions="Auto Auto">
 
 			<Button
@@ -55,6 +55,16 @@
 				Margin="7,7,0,0"
 				Command="{Binding NativeScanCommand}"
 				Content="Native"/>
+
+			<!-- Native Embed Demo button -->
+			<Button
+				Grid.Row="2" Grid.Column="0"
+				Grid.ColumnSpan="2"
+				Padding="20"
+				MinWidth="120"
+				Margin="0,7,0,0"
+				Command="{Binding NativeEmbedCommand}"
+				Content="Native Embed Demo"/>
 		</Grid>
 
 		<!-- Original Scanner Overlay -->
@@ -92,6 +102,15 @@
 			Grid.RowSpan="3"
 			IsVisible="{Binding ShowNativeScanner}"
 			Content="{Binding NativeScanner}"/>
+
+		<!-- Native Embed Demo Overlay -->
+		<ContentControl
+			Grid.Column="0"
+			Grid.Row="0"
+			Grid.ColumnSpan="3"
+			Grid.RowSpan="3"
+			IsVisible="{Binding ShowNativeEmbed}"
+			Content="{Binding NativeEmbedView}"/>
 
 		<!-- Result Overlay Background -->
 		<Panel

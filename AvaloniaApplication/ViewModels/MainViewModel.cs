@@ -279,4 +279,39 @@ public class MainViewModel : ViewModelBase
             Services.ToastService.ShowToastLong("ERROR: Camera permission not granted");
         }
     }
+
+    // --- Native Embed Demo ---
+    private Pages.NativeEmbedView? nativeEmbedView;
+    public Pages.NativeEmbedView? NativeEmbedView
+    {
+        get => nativeEmbedView;
+        set => nativeEmbedView = this.RaiseAndSetIfChanged(ref nativeEmbedView, value);
+    }
+
+    private bool showNativeEmbed;
+    public bool ShowNativeEmbed
+    {
+        get => showNativeEmbed;
+        set
+        {
+            if (value)
+            {
+                HideAllScanners();
+                ShowResult = false;
+            }
+            showNativeEmbed = this.RaiseAndSetIfChanged(ref showNativeEmbed, value);
+        }
+    }
+
+    public void NativeEmbedCommand()
+    {
+        System.Diagnostics.Debug.WriteLine(nameof(NativeEmbedCommand), "[TRACE]");
+        NativeEmbedView ??= new Pages.NativeEmbedView();
+        ShowNativeEmbed = true;
+    }
+
+    public void GoBackCommand()
+    {
+        ShowNativeEmbed = false;
+    }
 }

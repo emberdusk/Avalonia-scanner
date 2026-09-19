@@ -1,0 +1,106 @@
+<!--
+    NativeEmbedView - 原生 Android 视图嵌入演示页面
+
+    【这个页面演示什么？】
+    演示如何在 Avalonia 应用中嵌入原生 Android 控件。
+    这是 Avalonia 的一个强大功能，让你可以复用现有的 Android 原生控件。
+
+    【关键概念】
+    1. NativeControlHost - Avalonia 的"桥梁控件"，用于托管原生平台视图
+    2. EmbedSample - 我们自定义的 NativeControlHost 子类
+    3. INativeDemoControl - 平台实现接口，由 Android 项目实现
+
+    【工作流程】
+    当 EmbedSample 被添加到视觉树时：
+    Avalonia 调用 EmbedSample.CreateNativeControlCore()
+      → 委托给 EmbedSampleAndroid.CreateControl()
+        → 创建 Android 原生控件（Button 或 WebView）
+        → 包装在 AndroidViewControlHandle 中返回
+      → Avalonia 将原生控件添加到 Android 视图层级
+      → 自动管理位置和大小
+-->
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d" d:DesignWidth="400" d:DesignHeight="800"
+             x:Class="AvaloniaApplication.Pages.NativeEmbedView"
+             xmlns:local="clr-namespace:AvaloniaApplication"
+             xmlns:vm="clr-namespace:AvaloniaApplication.ViewModels"
+             x:DataType="vm:MainViewModel">
+
+    <!--
+        整体布局：垂直排列的 StackPanel
+        顶部是说明文字，中间是两个嵌入的原生控件，底部是返回按钮
+    -->
+    <StackPanel Spacing="10" Margin="20">
+
+        <!-- 标题 -->
+        <TextBlock Text="标题Native Android View Embedding"
+                   FontSize="20" FontWeight="Bold"
+                   HorizontalAlignment="Center"/>
+
+        <!--
+            【EmbedSample 是什么？】
+            它是我们定义的 NativeControlHost 子类（见 EmbedSample.cs）。
+            在 XAML 中声明后，它会：
+            1. 被添加到 Avalonia 视觉树
+            2. 触发 CreateNativeControlCore() 调用
+            3. 创建原生 Android 控件并显示
+
+            【IsSecond 属性】
+            控制创建哪种原生控件：
+            - false（默认）= 创建 Android Button
+            - true = 创建 Android WebView
+        -->
+
+        <!--
+            左侧面板：嵌入 Android Button
+            这个 EmbedSample 会创建一个可点击计数的 Android 原生按钮。
+            点击按钮时，按钮文本会更新显示点击次数。
+            这完全在 Android 原生代码中处理，不经过 Avalonia。
+        -->
+        <Border BorderBrush="Gray" BorderThickness="1" CornerRadius="5" Padding="5">
+            <StackPanel Spacing="5">
+                <TextBlock Text="Android Button (native)" FontSize="12" FontWeight="Bold"/>
+                <!--
+                    IsSecond="false" → 创建 Android Button
+                    这个按钮的外观完全由 Android 系统控制（Material Design 样式）。
+                    它的 Click 事件在 Android UI 线程上处理。
+                -->
+                <local:EmbedSample Height="80"/>
+            </StackPanel>
+        </Border>
+
+        <!--
+            右侧面板：嵌入 Android WebView
+            这个 EmbedSample 会创建一个 Android WebView，加载 android.com 网页。
+            你可以在 Avalonia 应用中浏览网页，而不需要切换到浏览器。
+        -->
+        <Border BorderBrush="Gray" BorderThickness="1" CornerRadius="5" Padding="5">
+            <StackPanel Spacing="5">
+                <TextBlock Text="Android WebView (native)" FontSize="12" FontWeight="Bold"/>
+                <!--
+                    IsSecond="true" → 创建 Android WebView
+                    WebView 是一个完整的网页浏览器控件。
+                    它可以加载任意 URL，并支持 JavaScript、CSS 等所有 Web 技术。
+                -->
+                <local:EmbedSample IsSecond="True" Height="200"/>
+            </StackPanel>
+        </Border>
+
+        <!-- 说明文字 -->
+        <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="Gray"
+                   Text="These are native Android controls embedded in Avalonia. The Button handles clicks in Android code, and WebView loads a real webpage."/>
+
+        <!--
+            返回按钮
+            使用 Avalonia 的 Command 绑定导航回主界面
+        -->
+        <Button Content="← Back to Main"
+                HorizontalAlignment="Center"
+                Padding="20,10"
+                Command="{Binding GoBackCommand}"/>
+
+    </StackPanel>
+</UserControl>

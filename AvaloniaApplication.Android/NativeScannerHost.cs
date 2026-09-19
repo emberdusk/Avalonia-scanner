@@ -33,7 +33,7 @@ public class NativeScannerButtonHostImpl : INativeScannerButtonHostImpl
 
         var cancelButton = new global::Android.Widget.Button(context)
         {
-            Text = "Cancel",
+            Text = "È¡Ïû",
         };
         cancelButton.SetTextColor(global::Android.Graphics.Color.Orange);
         cancelButton.SetBackgroundColor(global::Android.Graphics.Color.Bisque);

@@ -62,7 +62,7 @@ public class EmbedSampleAndroid : INativeDemoControl
             // WebView 是 Android 系统的网页浏览器控件。
             // 这里演示如何将一个完整的网页嵌入到 Avalonia 应用中。
             var webView = new global::Android.Webkit.WebView(parentContext);
-            webView.LoadUrl("https://www.android.com/");
+            webView.LoadUrl("https://www.baidu.com/");
 
             // 将 WebView 包装在 AndroidViewControlHandle 中返回。
             // Avalonia 会将这个 WebView 添加到 Android 视图层级，
@@ -77,7 +77,7 @@ public class EmbedSampleAndroid : INativeDemoControl
             // 它的外观和行为完全由 Android 系统控制。
             var button = new global::Android.Widget.Button(parentContext)
             {
-                Text = "Hello from Android!"
+                Text = "Android按钮"
             };
 
             // 【原生事件处理】

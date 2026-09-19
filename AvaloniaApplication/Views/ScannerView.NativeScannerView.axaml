@@ -19,9 +19,11 @@
                 BarcodesDetected="BarcodesDetected"/>
         </controls:MauiControlHost>
 
+        <!-- 按钮浮在摄像头上方，Z-order 由 XAML 中的顺序决定 -->
         <local:NativeScannerButtonHost
             Grid.Column="0" Grid.Row="0"
             IsVisible="{Binding ShowButtons}"
+            Height="60"
             VerticalAlignment="Bottom"
             Margin="0,0,0,20"
             x:Name="nativeButtonHost"/>
